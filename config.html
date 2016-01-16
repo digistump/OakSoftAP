@@ -364,8 +364,10 @@ $(function() {
 		            register_callback);
 	});
 	$('#cloud_connection').click(function(){
+		$('#cloud_loader').show();
 		$('#cloud_wait').show();
 		$('#cloud_fail').hide();
+		$('#cloud_rename').hide();
 		$('#net_fail').hide();
 		$('#cloud_ok').hide();
 		$('#cloud_retry').show();
@@ -389,6 +391,7 @@ $(function() {
 		  	}
 		  	$('#cloud_wait').hide();
 		  	$('#cloud_retry').hide();
+		  	$('#cloud_loader').hide();
 		  	new_device = device;
 		  	return;
 		  }
@@ -396,6 +399,7 @@ $(function() {
 		  	if(Date.now() - cloud_timeout > cloud_connect_time){
 		  		$('#cloud_fail').show();
 		  		$('#cloud_wait').hide();
+		  		$('#cloud_loader').hide();
 		  		return;
 		  	}
 		  }
@@ -403,6 +407,7 @@ $(function() {
 		  	if(Date.now() - cloud_timeout > 30000){
 		  		$('#net_fail').show();
 		  		$('#cloud_wait').hide();
+		  		$('#cloud_loader').hide();
 		  		return;
 		  	}
 		  }
@@ -411,7 +416,8 @@ $(function() {
 	};
 	$('#cloud_retry').click(function(){
 		$('#cloud_wait').show();
-		
+		$('#cloud_loader').show();
+		$('#cloud_rename').hide();
 		$('#cloud_fail').hide();
 		$('#net_fail').hide();
 		$('#cloud_ok').hide();
@@ -497,16 +503,16 @@ $(function() {
 
 
     	<div id="check_cloud" style="display:none;">
-    		<div id="cloud_wait"><b>Waiting for your Oak to connect to the cloud...</b><br></div>
-    		<div id="cloud_wait_long">Your Oak will download a firmware update before it connects, this may take several minutes. You should see the LED on the Oak blink rapidly while it downloads the update, please do not unplug it during this time.<br></div>
+    		<div id="cloud_wait"><b>Waiting for your Oak to connect to the cloud...</b><br><br></div>
+    		<div id="cloud_wait_long">Your Oak will download a firmware update before it connects, this may take several minutes. You should see the LED on the Oak blink rapidly while it downloads the update, please do not unplug it during this time.<br><br></div>
     		<div id="cloud_fail"><b>Your Oak did not connect to the cloud, please retry or start over.</b><br></div>
     		<div id="net_fail"><b>No internet connection found, please connect to your internet WiFi network and retry.</b><br></div>
     		
     		<div id="cloud_ok"><b>Your Oak is connected to the cloud and ready to use!</b><br></div>
     		<div id="cloud_name_failed" style="color:red;font-weight:bold;display:none;">Naming your Oak failed, please try again.<br></div>
     		<div id="cloud_new_name" style="display:none;"><b>Your Oak is now named: <span id="cloud_new_name_name"></span></b><br></div>
-    		<div id="cloud_rename"><b>Would you like to name your Oak on the Particle Cloud?</b><br><div  style="text-align:center;"> <input class="pure-input-1" id="cloud_name" type="text" placeholder="Name of your Oak"><br><button class="pure-button pure-button-primary" id="cloud_name_button">Save</button></div><br></div>
-    		<div id="cloud_loader"><br><br><img class="loader_image"></div>
+    		<div id="cloud_rename"class="pure-form"><b>Would you like to name your Oak on the Particle Cloud?</b><br><div  style="text-align:center;"> <input class="pure-input-1" id="cloud_name" type="text" placeholder="Name of your Oak"><br><button class="pure-button pure-button-primary" id="cloud_name_button">Save</button></div><br></div>
+    		<div id="cloud_loader" style="text-align:center;"><br><br><img class="loader_image"></div>
 <div style="padding-top:10px;text-align:center;">
 		        <button class="pure-button pure-button-primary" id="cloud_retry">Retry</button> &nbsp; 
 		        <button class="pure-button pure-button-primary" id="cloud_back">Start Over</button> &nbsp; 
