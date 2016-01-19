@@ -1,1 +1,1 @@
-## https://cdn.rawgit.com/digistump/OakSoftAP/master/config.html
+## http://cdn.rawgit.com/digistump/OakSoftAP/master/config.html
