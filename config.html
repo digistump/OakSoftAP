@@ -252,7 +252,10 @@ $(function() {
 	    			$('#wifi').fadeOut(150,function(){$('#saving').fadeIn(150);});
 	    			sec = 0;
 	    			passcode = "";
-	    			sap.setClaimCode(claim_code, claim_callback);
+	    			if(claim_code === "")
+					claim_callback(false, {"r":0});
+				else
+	    				sap.setClaimCode(claim_code, claim_callback);
 	    		}
 	    	});
     	}
