@@ -460,6 +460,7 @@ $(function() {
     <div id="app" style="display: inline-block;">
     	<h2 style="padding-top:10px;text-align:center;">Oak WiFi Config</h2>
     	<div id="start" style="text-align:center;">
+    	<b>WARNING:</b> The Oak firmware is currently an early beta release. Please test at your own risk, or wait 1-2 days for the official release.<br><br>
     		<button class="pure-button pure-button-primary" id="setup_button">I'm setting up a new Oak</button><br><br>
     		<button class="pure-button pure-button-primary" id="wifi_button">I'm just configuring the WiFi connection</button>
 
@@ -493,7 +494,7 @@ $(function() {
     	<div id="wifi" style="display:none;">
     	<div id="wifi_claimed" style="color:red;font-weight:bold;display:none;">This Oak may already be claimed by a Particle account, this wizard will only allow you to change the WiFi connection settings.<br><br></div>
     	<div id="no_networks" style="color:red;font-weight:bold;display:none;">No WiFi networks found. Please move your Oak closer to your network and then power cycle the Oak so that it will rescan.<div style="padding-top:10px;text-align:center;"><button class="pure-button pure-button-primary wifi_back">Back</button></div></div>
-	    	<table id="network" class="pure-table pure-table-horizontal" style="width:400px;">
+	    	<table id="network" class="pure-table pure-table-horizontal" style="width:320px;">
 			    <thead>
 			        <tr>
 			            <th>Select a network:</th>
@@ -513,14 +514,14 @@ $(function() {
 			</div>
 
 			<div id="manual" class="pure-form">
-			<b>Manually enter a network:</b><br>
+			<br><br><b>or manually enter a network:</b><br>
 		         <input class="pure-input-1" type="password" id="network_ssid_manual" placeholder="Network SSID">
 		         <input class="pure-input-1" type="password" id="network_passcode_manual" placeholder="Network Passcode">
 		         <div style="padding-top:10px;text-align:center;">
 		        <button class="pure-button pure-button-primary wifi_back">Back</button> &nbsp; 
 		        <button class="pure-button pure-button-primary" id="wifi_manual_next">Next</button>
 		        </div>
-			</div>
+			</div><br><br>
 			<b>Note:</b> You must power cycle your Oak to make it rescan for networks.
 		</div>
 		<div id="saving" style="display:none;text-align:center;">
