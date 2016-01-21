@@ -214,7 +214,24 @@ $(function() {
 
 	});
 
+	$('#wifi_manual_next').click(function(){
+		if($('#network_ssid_manual').val()==="")
+			return;
+
+		$('#wifi').fadeOut(150,function(){$('#saving').fadeIn(150,function(){
+			passcode = $('#network_passcode_manual').val();
+			ssid = $('#network_ssid_manual').val();
+		
+			if(claim_code === "")
+				claim_callback(false, {"r":0});
+			else
+				sap.setClaimCode(claim_code, claim_callback);
+		});});
+
+	});
+
 	function scan_callback(err, dat) {
+		$('#manual').show();
 		$('#password').hide();
     	if(err) { 	    		
     		comm_error('#connecting');
@@ -238,7 +255,11 @@ $(function() {
 	    			$("#network > tbody").append('<tr class="select_network" data-security="0" data-ssid="'+nets.ssid+'"><td style="height:24px;" >'+nets.ssid+'</td></tr>');
 	    	});
 
+	    	
+
+
 	    	$('.select_network').click(function(){
+	    	    $('#manual').hide();
 	    		$(this).addClass('selected');
 	    		if($(this).data('security') > 0){
 	    			$('#password').fadeIn(150);
@@ -490,6 +511,17 @@ $(function() {
 		        <button class="pure-button pure-button-primary" id="wifi_next">Next</button>
 		        </div>
 			</div>
+
+			<div id="manual" class="pure-form">
+			<b>Manually enter a network:</b><br>
+		         <input class="pure-input-1" type="password" id="network_ssid_manual" placeholder="Network SSID">
+		         <input class="pure-input-1" type="password" id="network_passcode_manual" placeholder="Network Passcode">
+		         <div style="padding-top:10px;text-align:center;">
+		        <button class="pure-button pure-button-primary wifi_back">Back</button> &nbsp; 
+		        <button class="pure-button pure-button-primary" id="wifi_manual_next">Next</button>
+		        </div>
+			</div>
+			<b>Note:</b> You must power cycle your Oak to make it rescan for networks.
 		</div>
 		<div id="saving" style="display:none;text-align:center;">
     		<b>Saving settings to your device...</b><br><br><br><img class="loader_image">
