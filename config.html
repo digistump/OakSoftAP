@@ -308,7 +308,7 @@ $(function() {
 	    	//found Oak
 	    	//console.log("Device ID: %s, claimed: %s", dat.id, dat.claimed ? "yes" : "no");
 		    softap_device = dat;
-		    if($.inArray(softap_device.id,claimed_devices)<0){
+		    if($.inArray(softap_device.id,claimed_devices)>0){
 				claim_code = "";
 			}
 		    console.log(softap_device);
