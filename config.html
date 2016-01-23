@@ -187,6 +187,22 @@ $(function() {
 	    sap.publicKey(pubkey_callback);
 	}
 
+	var claim_during_cloud = false;
+	function setClaimCode(){
+
+		/*
+		$.ajax('http://192.168.0.1/set',{
+		    'data': JSON.stringify({"cc":claim_code+'~'}), //{action:'x',params:['a','b','c']}
+		    'type': 'POST',
+		    'processData': false,
+		    'contentType': 'text/plain'
+		}).done(function (data) { claim_callback(false, {"r":0}); }).fail(function (jqXHR, textStatus, errorThrown) {  claim_callback(true, {"r":-1}); });
+		*/
+		claim_during_cloud = true;
+		claim_callback(false, {"r":0});
+		
+	}
+
 	function pubkey_callback(err, dat) {
 	    if(err) {
 	    	//console.log('7');
@@ -209,7 +225,7 @@ $(function() {
 			if(claim_code === "")
 				claim_callback(false, {"r":0});
 			else
-				sap.setClaimCode(claim_code, claim_callback);
+				setClaimCode(claim_code);
 		});});
 
 	});
@@ -225,7 +241,7 @@ $(function() {
 			if(claim_code === "")
 				claim_callback(false, {"r":0});
 			else
-				sap.setClaimCode(claim_code, claim_callback);
+				setClaimCode(claim_code);
 		});});
 
 	});
@@ -276,7 +292,7 @@ $(function() {
 	    			if(claim_code === "")
 					claim_callback(false, {"r":0});
 				else
-	    				sap.setClaimCode(claim_code, claim_callback);
+	    				setClaimCode(claim_code);
 	    		}
 	    	});
     	}
@@ -308,8 +324,9 @@ $(function() {
 	    	//found Oak
 	    	//console.log("Device ID: %s, claimed: %s", dat.id, dat.claimed ? "yes" : "no");
 		    softap_device = dat;
-		    if($.inArray(softap_device.id,claimed_devices)>0){
+		    if($.inArray(softap_device.id,claimed_devices)>=0){
 				claim_code = "";
+				console.log("CLEAR CLAIM");
 			}
 		    console.log(softap_device);
 			sap.scan(scan_callback);
@@ -404,39 +421,90 @@ $(function() {
 		if(cloud_connect_time == 60000){
 				$('#cloud_wait_long').show();
 			}
-		spark.getDevice(softap_device.id, function(err, device) {
-			
-		  if(device !== null){
-		  	$('#cloud_ok').show();
-		  	$('#cloud_name_failed').hide();
-		  	$('#cloud_new_name').hide();
-		  	if(device.name == ""){
-		  		$('#cloud_rename').show();
-		  	}
-		  	$('#cloud_wait').hide();
-		  	$('#cloud_retry').hide();
-		  	$('#cloud_loader').hide();
-		  	new_device = device;
-		  	return;
-		  }
-		  else if(err == "Error: Permission Denied"){
-		  	if(Date.now() - cloud_timeout > cloud_connect_time){
-		  		$('#cloud_fail').show();
-		  		$('#cloud_wait').hide();
-		  		$('#cloud_loader').hide();
-		  		return;
-		  	}
-		  }
-		  else{
-		  	if(Date.now() - cloud_timeout > 30000){
-		  		$('#net_fail').show();
-		  		$('#cloud_wait').hide();
-		  		$('#cloud_loader').hide();
-		  		return;
-		  	}
-		  }
-		  setTimeout(function(){try_to_cloud();},3000);
-		});
+
+		if(claim_during_cloud)	{
+			spark.claimCore(softap_device.id, function(err, body) {
+				
+			  if(body !== null){
+			  	if(body.ok){
+				  	$('#cloud_ok').show();
+				  	$('#cloud_name_failed').hide();
+				  	$('#cloud_new_name').hide();
+				  	//if(device.name == ""){
+				  	//	$('#cloud_rename').show();
+				  	//}
+				  	$('#cloud_wait').hide();
+				  	$('#cloud_retry').hide();
+				  	$('#cloud_loader').hide();
+				  	//new_device = device;
+				  	spark.getDevice(softap_device.id, function(err, device) {
+					
+						  if(device !== null){
+						  	if(device.name == ""){
+						  		$('#cloud_rename').show();
+						  	}
+						  	new_device = device;
+						  	return;
+						
+						}
+					});
+				  	return;
+			  	}
+			  }
+			  else if(err == "Error: Permission Denied"){
+			  	if(Date.now() - cloud_timeout > cloud_connect_time){
+			  		$('#cloud_fail').show();
+			  		$('#cloud_wait').hide();
+			  		$('#cloud_loader').hide();
+			  		return;
+			  	}
+			  }
+			  else{
+			  	if(Date.now() - cloud_timeout > 30000){
+			  		$('#net_fail').show();
+			  		$('#cloud_wait').hide();
+			  		$('#cloud_loader').hide();
+			  		return;
+			  	}
+			  }
+			  setTimeout(function(){try_to_cloud();},3000);
+			});
+		}
+		else{
+			spark.getDevice(softap_device.id, function(err, device) {
+				
+			  if(device !== null){
+			  	$('#cloud_ok').show();
+			  	$('#cloud_name_failed').hide();
+			  	$('#cloud_new_name').hide();
+			  	if(device.name == ""){
+			  		$('#cloud_rename').show();
+			  	}
+			  	$('#cloud_wait').hide();
+			  	$('#cloud_retry').hide();
+			  	$('#cloud_loader').hide();
+			  	new_device = device;
+			  	return;
+			  }
+			  else if(err == "Error: Permission Denied"){
+			  	if(Date.now() - cloud_timeout > cloud_connect_time){
+			  		$('#cloud_fail').show();
+			  		$('#cloud_wait').hide();
+			  		$('#cloud_loader').hide();
+			  		return;
+			  	}
+			  }
+			  else{
+			  	if(Date.now() - cloud_timeout > 30000){
+			  		$('#net_fail').show();
+			  		$('#cloud_wait').hide();
+			  		$('#cloud_loader').hide();
+			  		return;
+			  	}
+			  }
+			  setTimeout(function(){try_to_cloud();},3000);
+			});
+		}
 	};
 	$('#cloud_retry').click(function(){
 		$('#cloud_wait').show();
