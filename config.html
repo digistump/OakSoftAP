@@ -141,6 +141,36 @@ $(function() {
 		//console.log('comm error');
 	    $('#saving').fadeOut(150,function(){$('#connect').fadeIn(150);});	
 	}
+function comm_error_retry(){
+		$('#connect_failed').show();
+		//console.log('comm error');
+	    $('#connecting_retry').fadeOut(150,function(){$('#connect').fadeIn(150);});	
+	}
+
+	var wifi_connect_callback_retry = function(err, dat){
+		if(err) { 	    	
+			//console.log('1');
+			comm_error_retry();
+	    	return; 
+	    }
+	    if(dat.r !== 0){
+	    	//console.log('2');
+	    	comm_error_retry();
+	    	return;
+	    }
+
+	    $('#connecting_retry').fadeOut(150,function(){
+	    	if(cloud_connect_time == 90000){
+	    		$('#end_wait_long').show(); 
+	    		$('.cloud_wait_long').show(); 
+	    		$('.cloud_wait_short').hide(); 
+	    	}else{ 
+	    		$('.cloud_wait_long').hide(); 
+	    		$('.cloud_wait_short').show(); 
+	    		$('#end_wait_long').hide();}
+	    		$(end_element).fadeIn(150);
+	    	});
+	};
 	
 	var wifi_connect_callback = function(err, dat){
 		if(err) { 	    	
@@ -153,7 +183,8 @@ $(function() {
 	    	comm_error();
 	    	return;
 	    }
-	    $('#saving').fadeOut(150,function(){if(cloud_connect_time == 60000 && end_element == '#end'){$('#end_wait_long').show();}else{$('#end_wait_long').hide();}$(end_element).fadeIn(150);});
+
+	    $('#saving').fadeOut(150,function(){if(cloud_connect_time == 90000){$('#end_wait_long').show(); $('.cloud_wait_long').show(); $('.cloud_wait_short').hide(); }else{ $('.cloud_wait_long').hide(); $('.cloud_wait_short').show(); $('#end_wait_long').hide();}$(end_element).fadeIn(150);});
 	};
 
 	function config_callback(err, dat) {
@@ -183,7 +214,7 @@ $(function() {
 	    	comm_error();
 	    	return;
 	    }
-	    $.get( "http://192.168.0.1/system-version" ).fail(function(){cloud_connect_time = 60000;});
+	    $.get( "http://192.168.0.1/system-version" ).fail(function(){cloud_connect_time = 90000;});
 	    sap.publicKey(pubkey_callback);
 	}
 
@@ -209,6 +240,7 @@ $(function() {
 	    	comm_error();
 	    	return;
 	    }
+
 	    if(sec)
 	    	sap.configure({ssid: ssid,security: sec,password: passcode}, config_callback);
 	    else
@@ -311,6 +343,23 @@ $(function() {
 	    }
 	}
 
+	function connect_callback_retry(err, dat) {
+	    if (err) { 
+	    	if(Date.now() - connect_start < 30000){
+	    		setTimeout(function(){try_to_connect_retry();},3000);
+	    		return;
+	    	}
+	    	else{
+	    		$('#connect_failed').show();
+	    		$('#connecting_retry').fadeOut(150,function(){$('#connect').fadeIn(150);});	
+	    		return;
+	    	}
+	    }
+	    else{
+	    	//found Oak
+			sap.connect(wifi_connect_callback_retry);
+	    }
+	};
 
 	function connect_callback(err, dat) {
 	    if (err) { 
@@ -339,6 +388,10 @@ $(function() {
 
 	var try_to_connect = function() {
 		sap.deviceInfo(connect_callback);
+	};
+
+	var try_to_connect_retry = function() {
+		sap.deviceInfo(connect_callback_retry);
 	};
 	$('#cloud_name_button').click(function(){
 
@@ -375,11 +428,17 @@ $(function() {
 	$('#cloud_back').click(function(){
 		$('#check_cloud').fadeOut(150,function(){end_element = '#end';claim_code = "";$('#start').fadeIn(150);});	
 	});
+	$('#end_particle_back').click(function(){
+		$('#end_particle').fadeOut(150,function(){ end_element = '#end';claim_code = "";$('#start').fadeIn(150);});	
+	});
 	$('#connect_back').click(function(){
 		$('#connect').fadeOut(150,function(){$('#start').fadeIn(150);});	
 	});
 	$('#connect_next').click(function(){
 		$('#connect').fadeOut(150,function(){$('#connecting').fadeIn(150,function(){connect_start = Date.now(); try_to_connect();});});	
+	});
+	$('#end_particle_retry').click(function(){
+		$('#end_particle').fadeOut(150,function(){$('#connecting_retry').fadeIn(150,function(){connect_start = Date.now(); try_to_connect_retry();});});	
 	});
 	$('.wifi_back').click(function(){
 		$('#connect_failed').hide();
@@ -416,15 +475,13 @@ $(function() {
 		$('#net_fail').hide();
 		$('#cloud_ok').hide();
 		$('#cloud_retry').show();
-		$('#end_particle').fadeOut(150,function(){$('#check_cloud').fadeIn(150,function(){$('#cloud_retry').click();});});	
+		$('#end_particle').fadeOut(150,function(){ $('#check_cloud').fadeIn(150,function(){$('#cloud_retry').click();});});	
 		
 	});
 	var cloud_timeout = 0;
 	
 	var try_to_cloud = function(){
-		if(cloud_connect_time == 60000){
-				$('#cloud_wait_long').show();
-			}
+
 
 		if(claim_during_cloud)	{
 			spark.claimCore(softap_device.id, function(err, body) {
@@ -559,6 +616,10 @@ $(function() {
 	        	<button class="pure-button pure-button-primary" id="connect_next">Next</button>
 	        </div>
     	</div>
+    	<div id="connecting_retry" style="display:none;text-align:center;">
+    		<b>Attempting to connect to your Oak and retry the update...</b><br><br><br><img class="loader_image">
+
+    	</div>
     	<div id="connecting" style="display:none;text-align:center;">
     		<b>Attempting to connect to your Oak...</b><br><br><br><img class="loader_image">
 
@@ -612,7 +673,7 @@ $(function() {
 
     	<div id="check_cloud" style="display:none;">
     		<div id="cloud_wait"><b>Waiting for your Oak to connect to the cloud...</b><br><br></div>
-    		<div id="cloud_wait_long">Your Oak will download a firmware update before it connects, this may take several minutes. You should see the LED on the Oak blink rapidly while it downloads the update, please do not unplug it during this time.<br><br></div>
+    		
     		<div id="cloud_fail"><b>Your Oak did not connect to the cloud, please retry or start over.</b><br></div>
     		<div id="net_fail"><b>No internet connection found, please connect to your internet WiFi network and retry.</b><br></div>
     		
@@ -628,10 +689,18 @@ $(function() {
 		        </div>
     	</div>
     	<div id="end_particle" style="display:none;">
-    		<b>Your Oak will now reboot and attempt to connect using the settings you've just entered.</b><br>
-    		<br>Please connect back to the WiFi network that provides your internet connection and click the button below to check if the Oak has connected to the Particle Cloud. 
+    		<b>Your Oak will now reboot and attempt to connect using the settings you've just entered.</b><br><br>
+    		<div class="cloud_wait_long">Your Oak will download a firmware update before it connects, this may take several minutes.<br><br>
+    		<b>Watch the LED on your Oak</b> - if it changes from the slow blink to a rapid blink, but only for a few seconds then please reconnect to the Oak's WiFi network and press "Retry Update" (you may have to do this several times).<br><br> If the rapid blinking continues for at least 10 seconds then the firmware update is downloading, connect back to the WiFi network that provides your internet connection, and press "Check Cloud Connection."<br><br>If it does not blink rapidly at all, the Oak could not connect to your network - press "Start Over" and re-enter your WiFi info.<br><br></div>
+<div class="cloud_wait_short">
+    		<br>Please connect back to the WiFi network that provides your internet connection and click the button below to check if the Oak has connected to the Particle Cloud.</div> 
+<div style="padding-top:10px;text-align:center; cloud_wait_long">
+<button class="pure-button pure-button-primary" id="end_particle_back">Start Over</button> &nbsp; 
+<button class="pure-button pure-button-primary" id="end_particle_retry">Retry Update</button> &nbsp; <br><br>
+ </div>
 <div style="padding-top:10px;text-align:center;">
 		        <button class="pure-button pure-button-primary" id="cloud_connection">Check Cloud Connection</button> &nbsp; 
+		        
 
 		        </div>
     	</div>
