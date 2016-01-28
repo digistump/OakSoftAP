@@ -190,8 +190,8 @@ $(function() {
 	var claim_during_cloud = false;
 	function setClaimCode(){
 
-		/*
-		$.ajax('http://192.168.0.1/set',{
+		
+		/*$.ajax('http://192.168.0.1/set',{
 		    'data': JSON.stringify({"cc":claim_code+'~'}), //{action:'x',params:['a','b','c']}
 		    'type': 'POST',
 		    'processData': false,
@@ -330,9 +330,9 @@ $(function() {
 		    softap_device = dat;
 		    if($.inArray(softap_device.id,claimed_devices)>=0){
 				claim_code = "";
-				console.log("CLEAR CLAIM");
+				//console.log("CLEAR CLAIM");
 			}
-		    console.log(softap_device);
+		    //console.log(softap_device);
 			sap.scan(scan_callback);
 	    }
 	};
