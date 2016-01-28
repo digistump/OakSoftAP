@@ -235,7 +235,11 @@ $(function() {
 			return;
 
 		$('#wifi').fadeOut(150,function(){$('#saving').fadeIn(150,function(){
-			passcode = $('#network_passcode_manual').val();
+
+			if($('#network_passcode_manual').val()!==""){
+				passcode = $('#network_passcode_manual').val();
+				sec = 1;
+			}
 			ssid = $('#network_ssid_manual').val();
 		
 			if(claim_code === "")
