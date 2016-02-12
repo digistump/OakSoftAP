@@ -96,7 +96,8 @@
 	
 <script>
 $(function() {
-
+	var oak_count = 0;
+	var check_update_status = 0;
 	var access_token = "";
 	var claim_code = "";
 	var claimed_devices = "";
@@ -116,8 +117,8 @@ $(function() {
 	  else{
 	  			$('#login_email').val("");
 		$('#login_password').val("");
-	  	end_element = '#end_particle';
 	  	$('#connect_failed').hide();
+	  	$('#save_failed').hide();
 	  	access_token = body.access_token;
 	  	$.post( "https://api.particle.io/v1/device_claims", {"access_token":access_token}, function( data ) {
 		  claim_code = data.claim_code;
@@ -133,16 +134,17 @@ $(function() {
 	var ssid;
 	var sec = 0;
 	var passcode = "";
-	var end_element = '#end';
-	
 
-	function comm_error(){
-		$('#connect_failed').show();
+	function comm_error(save){
+		if(!save)
+			$('#connect_failed').show();
+		else
+			$('#save_failed').show();
 		//console.log('comm error');
 	    $('#saving').fadeOut(150,function(){$('#connect').fadeIn(150);});	
 	}
 function comm_error_retry(){
-		$('#connect_failed').show();
+		$('#save_failed').show();
 		//console.log('comm error');
 	    $('#connecting_retry').fadeOut(150,function(){$('#connect').fadeIn(150);});	
 	}
@@ -161,41 +163,86 @@ function comm_error_retry(){
 
 	    $('#connecting_retry').fadeOut(150,function(){
 	    	if(cloud_connect_time == 90000){
-	    		$('#end_wait_long').show(); 
-	    		$('.cloud_wait_long').show(); 
-	    		$('.cloud_wait_short').hide(); 
+	    		$('#wait_long').show();
+	    		$('#oak_counter').text(60);
+	    		oak_count = 60; 
+	    		$('#wait_short').hide(); 
 	    	}else{ 
-	    		$('.cloud_wait_long').hide(); 
-	    		$('.cloud_wait_short').show(); 
-	    		$('#end_wait_long').hide();}
-	    		$(end_element).fadeIn(150);
-	    	});
+	    		$('#wait_long').hide(); 
+	    		$('#wait_short').show(); 
+	    		
+	    	}
+	    	$('#saved').fadeIn(150,function(){if(cloud_connect_time == 90000){counter_tick();}});
+	    });
 	};
+
+
+	function counter_tick(){
+		if(oak_count>0){
+			oak_count--;
+			
+			if(oak_count == 0){
+				check_update_status = 1;
+				$('#saved').fadeOut(150,function(){$('#connect').fadeIn(150);});	
+			}
+			else{
+				$('#oak_counter').text(oak_count);
+				setTimeout(function(){counter_tick();},1000);
+			}
+			
+		}
+
+	}
 	
 	var wifi_connect_callback = function(err, dat){
 		if(err) { 	    	
 			//console.log('1');
-			comm_error();
+			comm_error(1);
 	    	return; 
 	    }
 	    if(dat.r !== 0){
 	    	//console.log('2');
-	    	comm_error();
+	    	comm_error(1);
 	    	return;
 	    }
 
-	    $('#saving').fadeOut(150,function(){if(cloud_connect_time == 90000){$('#end_wait_long').show(); $('.cloud_wait_long').show(); $('.cloud_wait_short').hide(); }else{ $('.cloud_wait_long').hide(); $('.cloud_wait_short').show(); $('#end_wait_long').hide();}$(end_element).fadeIn(150);});
+	    $('#saving').fadeOut(150,function(){
+	    	if(cloud_connect_time == 90000){
+	    		$('#wait_long').show(); 
+	    		$('#oak_counter').text(60);
+	    		oak_count = 60;
+	    		$('#wait_short').hide(); 
+	    	}else{ 
+	    		$('#wait_long').hide(); 
+	    		$('#wait_short').show(); 
+	    	}
+	    		$('#saved').fadeIn(150,function(){if(cloud_connect_time == 90000){counter_tick();}});
+	    	});
 	};
 
-	function config_callback(err, dat) {
+	function config_callback_retry(err, dat) {
 		if(err) { 	 
 		//console.log('3');   	
-			comm_error();
+			comm_error(1);
 	    	return; 
 	    }
 	    if(dat.r !== 0){
 	    	//console.log('4');
-	    	comm_error();
+	    	comm_error(1);
+	    	return;
+	    }
+		sap.connect(wifi_connect_callback_retry);
+	}
+
+	function config_callback(err, dat) {
+		if(err) { 	 
+		//console.log('3');   	
+			comm_error(1);
+	    	return; 
+	    }
+	    if(dat.r !== 0){
+	    	//console.log('4');
+	    	comm_error(1);
 	    	return;
 	    }
 		sap.connect(wifi_connect_callback);
@@ -203,26 +250,28 @@ function comm_error_retry(){
 
 	var cloud_connect_time = 30000;
 
+
+
 	function claim_callback(err, dat) {
 	    if(err) {//console.log('5');
 
-	    	comm_error();
+	    	comm_error(1);
 	    	return;
 	    }
 	    if(dat.r !== 0){
 	    	//console.log(dat);
-	    	comm_error();
+	    	comm_error(1);
 	    	return;
 	    }
-	    $.get( "http://192.168.0.1/system-version" ).fail(function(){cloud_connect_time = 90000;});
+	    
 	    sap.publicKey(pubkey_callback);
 	}
 
 	var claim_during_cloud = false;
 	function setClaimCode(){
-
+/*
 		
-		/*$.ajax('http://192.168.0.1/set',{
+		$.ajax('http://192.168.0.1/set',{
 		    'data': JSON.stringify({"cc":claim_code+'~'}), //{action:'x',params:['a','b','c']}
 		    'type': 'POST',
 		    'processData': false,
@@ -237,7 +286,7 @@ function comm_error_retry(){
 	function pubkey_callback(err, dat) {
 	    if(err) {
 	    	//console.log('7');
-	    	comm_error();
+	    	comm_error(1);
 	    	return;
 	    }
 
@@ -246,6 +295,19 @@ function comm_error_retry(){
 	    else
 	    	sap.configure({ssid: ssid,security: sec}, config_callback);
 	}
+	function pubkey_callback_retry(err, dat) {
+	    if(err) {
+	    	//console.log('7');
+	    	comm_error(1);
+	    	return;
+	    }
+
+	    if(sec)
+	    	sap.configure({ssid: ssid,security: sec,password: passcode}, config_callback_retry);
+	    else
+	    	sap.configure({ssid: ssid,security: sec}, config_callback_retry);
+	}
+
 
 	$('#wifi_next').click(function(){
 		if($('#network_passcode').val()==="")
@@ -286,7 +348,7 @@ function comm_error_retry(){
 		$('#manual').show();
 		$('#password').hide();
     	if(err) { 	    		
-    		comm_error('#connecting');
+    		comm_error(0);
 	    	return;
 	    }
 
@@ -326,16 +388,17 @@ function comm_error_retry(){
 	    			sec = 0;
 	    			passcode = "";
 	    			if(claim_code === "")
-					claim_callback(false, {"r":0});
-				else
+						claim_callback(false, {"r":0});
+					else
 	    				setClaimCode(claim_code);
 	    		}
 	    	});
     	}
 
 
+    	
 
-    	if(dat.claimed && claim_code !== ""){
+    	if(softap_device.claimed){
 	    	$('#connecting').fadeOut(150,function(){$('#wifi_claimed').show();$('#wifi').fadeIn(150);});	
 	    }
 	    else{
@@ -357,7 +420,7 @@ function comm_error_retry(){
 	    }
 	    else{
 	    	//found Oak
-			sap.connect(wifi_connect_callback_retry);
+			sap.publicKey(pubkey_callback_retry);
 	    }
 	};
 
@@ -375,14 +438,26 @@ function comm_error_retry(){
 	    }
 	    else{
 	    	//found Oak
-	    	//console.log("Device ID: %s, claimed: %s", dat.id, dat.claimed ? "yes" : "no");
-		    softap_device = dat;
-		    if($.inArray(softap_device.id,claimed_devices)>=0){
-				claim_code = "";
-				//console.log("CLEAR CLAIM");
+	    	
+	    	if(check_update_status){
+	    		check_update_status = 0;
+	    		$.get( "http://192.168.0.1/system-version", function(){
+	    			$('#connecting').fadeOut(150,function(){$('#update_ok').fadeIn(150);});	
+	    		} ).fail(function(){
+	    			$('#connecting').fadeOut(150,function(){$('#update_failed').fadeIn(150);});	
+	    		});
+	    	}
+	    	else{
+		    	//console.log("Device ID: %s, claimed: %s", dat.id, dat.claimed ? "yes" : "no");
+			    softap_device = dat;
+			    if($.inArray(softap_device.id,claimed_devices)>=0 || softap_device.claimed){
+					claim_code = "";
+					//console.log("CLEAR CLAIM");
+				}
+			    //console.log(softap_device);
+			    $.get( "http://192.168.0.1/system-version" ).done(function(vdata){$('#systemv').text(vdata);sap.scan(scan_callback);}).fail(function(){cloud_connect_time = 90000;$('#systemv').text("0 - No Updates");sap.scan(scan_callback);});
+				
 			}
-		    //console.log(softap_device);
-			sap.scan(scan_callback);
 	    }
 	};
 
@@ -398,9 +473,9 @@ function comm_error_retry(){
 		if($('#cloud_name').val()===""){
 			return;
 		}
-		device.rename($('#cloud_name').val(), function(err, data) {
+		new_device.rename($('#cloud_name').val(), function(err, data) {
 		  if (err) {
-		    $('#cloud_name_failed').fadeIn(150);
+		    $('#cloud_name_failed').show();
 		  } else {
 		  	$('#cloud_name_failed').hide();
 		  	$('#cloud_new_name_name').text($('#cloud_name').val());
@@ -410,38 +485,25 @@ function comm_error_retry(){
 		});
 	});
 
-	$('#setup_button').click(function(){
-		$('#start').fadeOut(150,function(){$('#particle').fadeIn(150);});	
-	});
-	$('#wifi_button').click(function(){
-		$('#connect_failed').hide();
-		$('#start').fadeOut(150,function(){$('#connect').fadeIn(150);});	
-	});
-	$('#login_back').click(function(){
-		$('#particle').fadeOut(150,function(){$('#login_email').val("");
-		$('#login_password').val("");end_element = '#end';claim_code = "";$('#start').fadeIn(150);});	
 
-	});
 	$('#end_back').click(function(){
-		$('#end').fadeOut(150,function(){end_element = '#end';claim_code = "";$('#start').fadeIn(150);});	
+		$('#check_cloud').fadeOut(150,function(){claim_code = "";$('#particle').fadeIn(150,function(){});});	
 	});
-	$('#cloud_back').click(function(){
-		$('#check_cloud').fadeOut(150,function(){end_element = '#end';claim_code = "";$('#start').fadeIn(150);});	
-	});
-	$('#end_particle_back').click(function(){
-		$('#end_particle').fadeOut(150,function(){ end_element = '#end';claim_code = "";$('#start').fadeIn(150);});	
+	$('.back_to_wifi').click(function(){
+		$('#'+$(this).data('out')).fadeOut(150,function(){ claim_code = "";$('#connect').fadeIn(150,function(){});});	
 	});
 	$('#connect_back').click(function(){
-		$('#connect').fadeOut(150,function(){$('#start').fadeIn(150);});	
+		$('#connect').fadeOut(150,function(){$('#particle').fadeIn(150,function(){});});	
 	});
 	$('#connect_next').click(function(){
 		$('#connect').fadeOut(150,function(){$('#connecting').fadeIn(150,function(){connect_start = Date.now(); try_to_connect();});});	
 	});
-	$('#end_particle_retry').click(function(){
-		$('#end_particle').fadeOut(150,function(){$('#connecting_retry').fadeIn(150,function(){connect_start = Date.now(); try_to_connect_retry();});});	
+	$('#update_retry').click(function(){
+		$('#update_failed').fadeOut(150,function(){$('#connecting_retry').fadeIn(150,function(){connect_start = Date.now(); try_to_connect_retry();});});	
 	});
 	$('.wifi_back').click(function(){
 		$('#connect_failed').hide();
+		$('#save_failed').hide();
 		$('#wifi').fadeOut(150,function(){$('#connect').fadeIn(150);});	
 	});
 	$('#login_button').click(function(){
@@ -464,18 +526,23 @@ function comm_error_retry(){
 	$('#login_register').click(function(){
 		$('#login_button').attr('disabled','disabled');
 		$('#login_register').attr('disabled','disabled');
-		spark.createUser({username: $('#login_email').val(), password: $('#login_password').val()},
+
+		spark.createUser($('#login_email').val(), $('#login_password').val(),
 		            register_callback);
 	});
-	$('#cloud_connection').click(function(){
+	$('.check_cloud').click(function(){
 		$('#cloud_loader').show();
 		$('#cloud_wait').show();
 		$('#cloud_fail').hide();
 		$('#cloud_rename').hide();
 		$('#net_fail').hide();
 		$('#cloud_ok').hide();
-		$('#cloud_retry').show();
-		$('#end_particle').fadeOut(150,function(){ $('#check_cloud').fadeIn(150,function(){$('#cloud_retry').click();});});	
+		$('#cloud_retry').hide();
+		$('#cloud_back').hide();
+		$('#cloud_name_failed').hide();
+		$('#cloud_new_name').hide();
+		$('#end_back').hide();
+		$('#'+$(this).data('out')).fadeOut(150,function(){ $('#check_cloud').fadeIn(150,function(){$('#cloud_retry').click();});});	
 		
 	});
 	var cloud_timeout = 0;
@@ -496,13 +563,16 @@ function comm_error_retry(){
 				  	//}
 				  	$('#cloud_wait').hide();
 				  	$('#cloud_retry').hide();
+				  	$('#cloud_back').hide();
+			  		$('#end_back').show();
 				  	$('#cloud_loader').hide();
 				  	//new_device = device;
 				  	spark.getDevice(softap_device.id, function(err, device) {
 					
 						  if(device !== null){
-						  	if(device.name == ""){
-						  		$('#cloud_rename').show();
+						  	console.log(device);
+						  	if(device.name === null){
+						  		//TODO why is rename broken on sparkjs? $('#cloud_rename').show();
 						  	}
 						  	new_device = device;
 						  	return;
@@ -516,6 +586,9 @@ function comm_error_retry(){
 			  	if(Date.now() - cloud_timeout > cloud_connect_time){
 			  		$('#cloud_fail').show();
 			  		$('#cloud_wait').hide();
+			  		$('#cloud_retry').show();
+				  	$('#cloud_back').show();
+			  		$('#end_back').show();
 			  		$('#cloud_loader').hide();
 			  		return;
 			  	}
@@ -525,6 +598,9 @@ function comm_error_retry(){
 			  		$('#net_fail').show();
 			  		$('#cloud_wait').hide();
 			  		$('#cloud_loader').hide();
+			  		$('#cloud_retry').show();
+				  	$('#cloud_back').hide();
+			  		$('#end_back').show();
 			  		return;
 			  	}
 			  }
@@ -538,11 +614,14 @@ function comm_error_retry(){
 			  	$('#cloud_ok').show();
 			  	$('#cloud_name_failed').hide();
 			  	$('#cloud_new_name').hide();
-			  	if(device.name == ""){
-			  		$('#cloud_rename').show();
+			  	console.log(device);
+			  	if(device.name === null){
+			  		//TODO why is rename broken on sparkjs? $('#cloud_rename').show();
 			  	}
 			  	$('#cloud_wait').hide();
 			  	$('#cloud_retry').hide();
+			  	$('#cloud_back').hide();
+			  	$('#end_back').show();
 			  	$('#cloud_loader').hide();
 			  	new_device = device;
 			  	return;
@@ -552,6 +631,9 @@ function comm_error_retry(){
 			  		$('#cloud_fail').show();
 			  		$('#cloud_wait').hide();
 			  		$('#cloud_loader').hide();
+			  		$('#cloud_retry').show();
+				  	$('#cloud_back').show();
+			  		$('#end_back').show();
 			  		return;
 			  	}
 			  }
@@ -560,6 +642,9 @@ function comm_error_retry(){
 			  		$('#net_fail').show();
 			  		$('#cloud_wait').hide();
 			  		$('#cloud_loader').hide();
+			  		$('#cloud_retry').show();
+				  	$('#cloud_back').hide();
+			  		$('#end_back').show();
 			  		return;
 			  	}
 			  }
@@ -574,6 +659,9 @@ function comm_error_retry(){
 		$('#cloud_fail').hide();
 		$('#net_fail').hide();
 		$('#cloud_ok').hide();
+		$('#cloud_retry').hide();
+		$('#cloud_back').hide();
+		$('#end_back').hide();
 		cloud_timeout = Date.now();
 		try_to_cloud();
 		
@@ -588,20 +676,14 @@ function comm_error_retry(){
 <div id="wrapper" style="text-align: center" style="display:none;">    
     <div id="app" style="display: inline-block;">
     	<h2 style="padding-top:10px;text-align:center;">Oak WiFi Config</h2>
-    	<div id="start" style="text-align:center;">
-    	<b>WARNING:</b> The Oak firmware is currently an early beta release. Please test at your own risk, or wait 1-2 days for the official release.<br><br>
-    		<button class="pure-button pure-button-primary" id="setup_button">I'm setting up a new Oak</button><br><br>
-    		<button class="pure-button pure-button-primary" id="wifi_button">I'm just configuring the WiFi connection</button>
-
-    	</div>
-    	<div id="particle"  class="pure-form" style="display:none;">
-    		You must have a Particle account to setup an Oak for OTA updates and cloud usage. Please login or register below.<br>
+    	<div id="particle"  class="pure-form">
+    		You must have a Particle.io account to setup an Oak. Please login or register below.<br>
 <br><br>
 <div id="login_error" style="color:red;font-weight:bold;display:none;">Invalid email or password.</div>
 		<input class="pure-input-1" id="login_email" type="email" placeholder="Particle Login Email"><br>
 		<input class="pure-input-1" id="login_password" type="password" placeholder="Particle Password">
 	         <div style="padding-top:10px;text-align:center;">
-	        <button class="pure-button pure-button-primary" id="login_back">Back</button> &nbsp; 
+	        <!--<button class="pure-button pure-button-primary" id="login_back">Back</button> &nbsp; -->
 	        <button class="pure-button pure-button-primary" id="login_register">Register</button> &nbsp;
 	        <button class="pure-button pure-button-primary" id="login_button">Login</button>
 	        </div>
@@ -609,8 +691,9 @@ function comm_error_retry(){
 
 
     	<div id="connect" style="display:none;">
-    	<div id="connect_failed" style="color:red;font-weight:bold;display:none;">Unable to connect or save settings to your Oak, please ensure you are connected to the Oak's network and retry.<br><br></div>
-    		<b>Please connect to the ACORN-XXXXXX WiFi network.</b><br><br>Where XXXXXX is your device's unique ID.<br><br>If you do not see this network ensure your Oak is powered and see the troubleshooting page here: <a href="http://digistump.com/wiki/oak">http://digistump.com/wiki/oak</a><br><br><b>Once connected click next.</b>
+    	<div id="save_failed" style="color:red;font-weight:bold;display:none;">Unable to save settings to your Oak, please ensure you are connected to the Oak's network and retry.<br><br></div>
+    	<div id="connect_failed" style="color:red;font-weight:bold;display:none;">Unable to connect to your Oak, please ensure you are connected to the Oak's network and retry.<br><br></div>
+    		<b>Please connect to the ACORN-XXXXXX WiFi network.</b><br><br>Where XXXXXX is unique to your device.<br><br>If you do not see this network ensure your Oak is powered on and see the troubleshooting page here: <a href="http://digistump.com/wiki/oak">http://digistump.com/wiki/oak</a><br><br><b>Once connected click next.</b>
     		<div style="padding-top:10px;text-align:center;">
     		<button class="pure-button pure-button-primary" id="connect_back">Back</button> &nbsp; 
 	        	<button class="pure-button pure-button-primary" id="connect_next">Next</button>
@@ -625,8 +708,8 @@ function comm_error_retry(){
 
     	</div>
     	<div id="wifi" style="display:none;">
-    	<div id="wifi_claimed" style="color:red;font-weight:bold;display:none;">This Oak may already be claimed by a Particle account, this wizard will only allow you to change the WiFi connection settings.<br><br></div>
-    	<div id="no_networks" style="color:red;font-weight:bold;display:none;">No WiFi networks found. Please move your Oak closer to your network and then power cycle the Oak so that it will rescan.<div style="padding-top:10px;text-align:center;"><button class="pure-button pure-button-primary wifi_back">Back</button></div></div>
+    	<div id="wifi_claimed" style="color:red;font-weight:bold;display:none;">This Oak may already be claimed by another Particle account, this wizard will only allow you to change the WiFi connection settings.<br><br></div>
+    	<div id="no_networks" style="color:red;font-weight:bold;display:none;">No WiFi networks found. Please click "Back," move your Oak closer to your network, and then power cycle the Oak so that it will rescan.</div>
 	    	<table id="network" class="pure-table pure-table-horizontal" style="width:320px;">
 			    <thead>
 			        <tr>
@@ -655,55 +738,62 @@ function comm_error_retry(){
 		        <button class="pure-button pure-button-primary" id="wifi_manual_next">Next</button>
 		        </div>
 			</div><br><br>
-			<b>Note:</b> You must power cycle your Oak to make it rescan for networks.
+			<b>Notes:</b> Only the first 10 networks will be listed above, if your network does not appear try manually entering it. You must power cycle your Oak to make it rescan for networks.<br><br>System Version: <span id="systemv"></span>
 		</div>
 		<div id="saving" style="display:none;text-align:center;">
     		<b>Saving settings to your device...</b><br><br><br><img class="loader_image">
 
     	</div>
-    	<div id="end" style="display:none;">
+    	<div id="saved" style="display:none;text-align:center;">
     		<b>Your Oak will now reboot and attempt to connect using the settings you've just entered.</b><br><br>
-    		<div id="end_wait_long">Once connected your Oak will download a firmware update, this may take several minutes. You should see the LED on the Oak blink rapidly while it downloads the update, please do not unplug it during this time.<br><br></div>
-<div style="padding-top:10px;text-align:center;">
-		        <button class="pure-button pure-button-primary" id="end_back">Start Over</button> &nbsp; 
+    		<div id="wait_long">Once connected your Oak will download a firmware update, this may take several minutes. You should see the LED on the Oak blink rapidly while it downloads the update, please do not unplug it during this time.<br><br><div style="text-align:center;">Allowing time for the Oak to update, the next step will be shown in <span id="oak_counter">30</span> seconds.<br><br><img class="loader_image"></div></div>
+			<div id="wait_short">
+				Please connect back to the WiFi network that provides your internet connection and click the "Next" button to check if the Oak has connected to the Particle Cloud.
 
+				<div style="padding-top:10px;text-align:center;">
+		        <button class="pure-button pure-button-primary check_cloud" data-out="saved">Next</button> 
 		        </div>
+			</div>
+    	</div>
+    	<!--if needs an update then jump to #connect and then to these next two-->
+    	<div id="update_failed" style="display:none;">
+    		<b>Your Oak failed to download the update. Please power cycle your Oak, reconnect to its AP, and then click "Retry" to try again with your current settings or "Change Settings" to try a different WiFi network.</b>
+
+				<div style="padding-top:10px;text-align:center;">
+		        <button class="pure-button pure-button-primary" id="update_retry">Retry</button> <!--do the connect routine-->
+		        <button class="pure-button pure-button-primary back_to_wifi" data-out="update_failed">Change Settings</button> <!--do the scan routine-->
+		        </div>
+		
+    	</div>
+    	<div id="update_ok" style="display:none;">
+    		<b>Your Oak updated successfully. Please connect back to the WiFi network that provides your internet connection and click the "Next" button to check if the Oak has connected to the Particle Cloud.</b>
+
+				<div style="padding-top:10px;text-align:center;">
+		        <button class="pure-button pure-button-primary check_cloud" data-out="update_ok">Next</button> 
+		        </div>
+		
     	</div>
 
 
     	<div id="check_cloud" style="display:none;">
     		<div id="cloud_wait"><b>Waiting for your Oak to connect to the cloud...</b><br><br></div>
     		
-    		<div id="cloud_fail"><b>Your Oak did not connect to the cloud, please retry or start over.</b><br></div>
-    		<div id="net_fail"><b>No internet connection found, please connect to your internet WiFi network and retry.</b><br></div>
+    		<div id="cloud_fail"><b>Your Oak did not connect to the cloud, please retry or change your WiFi settings.</b><br><br></div>
+    		<div id="net_fail"><b>No internet connection found, please connect to your internet WiFi network and retry.</b><br><br></div>
     		
-    		<div id="cloud_ok"><b>Your Oak is connected to the cloud and ready to use!</b><br></div>
-    		<div id="cloud_name_failed" style="color:red;font-weight:bold;display:none;">Naming your Oak failed, please try again.<br></div>
-    		<div id="cloud_new_name" style="display:none;"><b>Your Oak is now named: <span id="cloud_new_name_name"></span></b><br></div>
-    		<div id="cloud_rename"class="pure-form"><b>Would you like to name your Oak on the Particle Cloud?</b><br><div  style="text-align:center;"> <input class="pure-input-1" id="cloud_name" type="text" placeholder="Name of your Oak"><br><button class="pure-button pure-button-primary" id="cloud_name_button">Save</button></div><br></div>
-    		<div id="cloud_loader" style="text-align:center;"><br><br><img class="loader_image"></div>
+    		<div id="cloud_ok"><b>Your Oak is connected to the cloud and ready to use!</b><br><br></div>
+    		<div id="cloud_name_failed" style="color:red;font-weight:bold;display:none;">Naming your Oak failed, please try again.<br><br></div>
+    		<div id="cloud_new_name" style="display:none;"><b>Your Oak is now named: <span id="cloud_new_name_name"></span></b><br><br></div>
+    		<div id="cloud_rename"class="pure-form" style="display:none;"><b>Would you like to name your Oak on the Particle Cloud?</b><br><br><div  style="text-align:center;"> <input class="pure-input-1" id="cloud_name" type="text" placeholder="Name of your Oak"><br><button class="pure-button pure-button-primary" id="cloud_name_button">Save</button></div><br></div>
+    		<div id="cloud_loader" style="text-align:center;"><br><img class="loader_image"></div>
 <div style="padding-top:10px;text-align:center;">
 		        <button class="pure-button pure-button-primary" id="cloud_retry">Retry</button> &nbsp; 
-		        <button class="pure-button pure-button-primary" id="cloud_back">Start Over</button> &nbsp; 
+		        <button class="pure-button pure-button-primary back_to_wifi" id="cloud_back" data-out="check_cloud">Change Settings</button> &nbsp; 
+		        <button class="pure-button pure-button-primary"  id="end_back">Start Over</button> &nbsp; 
 
 		        </div>
     	</div>
-    	<div id="end_particle" style="display:none;">
-    		<b>Your Oak will now reboot and attempt to connect using the settings you've just entered.</b><br><br>
-    		<div class="cloud_wait_long">Your Oak will download a firmware update before it connects, this may take several minutes.<br><br>
-    		<b>Watch the LED on your Oak</b> - if it changes from the slow blink to a rapid blink, but only for a few seconds then please reconnect to the Oak's WiFi network and press "Retry Update" (you may have to do this several times).<br><br> If the rapid blinking continues for at least 10 seconds then the firmware update is downloading, connect back to the WiFi network that provides your internet connection, and press "Check Cloud Connection."<br><br>If it does not blink rapidly at all, the Oak could not connect to your network - press "Start Over" and re-enter your WiFi info.<br><br></div>
-<div class="cloud_wait_short">
-    		<br>Please connect back to the WiFi network that provides your internet connection and click the button below to check if the Oak has connected to the Particle Cloud.</div> 
-<div style="padding-top:10px;text-align:center; cloud_wait_long">
-<button class="pure-button pure-button-primary" id="end_particle_back">Start Over</button> &nbsp; 
-<button class="pure-button pure-button-primary" id="end_particle_retry">Retry Update</button> &nbsp; <br><br>
- </div>
-<div style="padding-top:10px;text-align:center;">
-		        <button class="pure-button pure-button-primary" id="cloud_connection">Check Cloud Connection</button> &nbsp; 
-		        
 
-		        </div>
-    	</div>
     </div>
 </div>
 <script>
