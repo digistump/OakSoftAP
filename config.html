@@ -269,7 +269,7 @@ function comm_error_retry(){
 
 	var claim_during_cloud = false;
 	function setClaimCode(){
-/*
+
 		
 		$.ajax('http://192.168.0.1/set',{
 		    'data': JSON.stringify({"cc":claim_code+'~'}), //{action:'x',params:['a','b','c']}
@@ -277,9 +277,9 @@ function comm_error_retry(){
 		    'processData': false,
 		    'contentType': 'text/plain'
 		}).done(function (data) { claim_callback(false, {"r":0}); }).fail(function (jqXHR, textStatus, errorThrown) {  claim_callback(true, {"r":-1}); });
-		*/
-		claim_during_cloud = true;
-		claim_callback(false, {"r":0});
+		
+		//claim_during_cloud = true;
+		//claim_callback(false, {"r":0});
 		
 	}
 
