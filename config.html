@@ -96,6 +96,11 @@
 	
 <script>
 $(function() {
+	//this next line with get replaced with "var updateServerMode = 3;" on the local server
+	var slowFail = 0;
+	var updateServerMode = 1;
+	var server_host = "oakota.digistump.com";
+	var server_fingerprint = "98 66 d5 5c 3d 4a 49 24 e3 1b 72 8b 8f 2e 65 2e 32 2a 7b 95";
 	var oak_count = 0;
 	var check_update_status = 0;
 	var access_token = "";
@@ -103,6 +108,15 @@ $(function() {
 	var claimed_devices = "";
 	var new_device;
 	var sap = new SoftAPSetup({ protocol: 'http' });
+
+	if(updateServerMode == 3){
+    	server_host = window.location.hostname;
+    	$.ajax('/thumb.txt', {
+		 		'success':function (txt) {server_fingerprint = txt},
+		 		'type':'GET',			
+		 		'contentType':'text/plain'
+		 });
+    }
 
 	var login_callback = function(err, body) {
 
@@ -164,9 +178,17 @@ function comm_error_retry(){
 	    $('#connecting_retry').fadeOut(150,function(){
 	    	if(cloud_connect_time == 90000){
 	    		$('#wait_long').show();
-	    		$('#oak_counter').text(60);
-	    		oak_count = 60; 
+	    		if(updateServerMode>1){
+	    			$('#oak_counter').text(180);
+	    			oak_count = 180; 
+	    		}
+	    		else{
+	    			$('#oak_counter').text(60);
+	    			oak_count = 60; 
+	    		}
+	    		
 	    		$('#wait_short').hide(); 
+	    		
 	    	}else{ 
 	    		$('#wait_long').hide(); 
 	    		$('#wait_short').show(); 
@@ -209,8 +231,14 @@ function comm_error_retry(){
 	    $('#saving').fadeOut(150,function(){
 	    	if(cloud_connect_time == 90000){
 	    		$('#wait_long').show(); 
-	    		$('#oak_counter').text(60);
-	    		oak_count = 60;
+	    		if(updateServerMode>1){
+	    			$('#oak_counter').text(180);
+	    			oak_count = 180; 
+	    		}
+	    		else{
+	    			$('#oak_counter').text(60);
+	    			oak_count = 60; 
+	    		}
 	    		$('#wait_short').hide(); 
 	    	}else{ 
 	    		$('#wait_long').hide(); 
@@ -289,11 +317,26 @@ function comm_error_retry(){
 	    	comm_error(1);
 	    	return;
 	    }
+		if(updateServerMode == 2){
+	    	server_host = "oakotafallback.digistump.com";
+	    }
 
-	    if(sec)
-	    	sap.configure({ssid: ssid,security: sec,password: passcode}, config_callback);
-	    else
-	    	sap.configure({ssid: ssid,security: sec}, config_callback);
+	    $.ajax('http://192.168.0.1/set',{
+ 		    'data': JSON.stringify({
+ 				"first-update-domain":server_host,
+ 				"first-update-fingerprint":server_fingerprint
+ 			}), 
+ 		    'type': 'POST',
+  		    'processData': false,
+  		    'contentType': 'text/plain'
+  		}).done(function (data) { 
+  			if(sec)
+	    		sap.configure({ssid: ssid,security: sec,password: passcode}, config_callback);
+	    	else
+	    		sap.configure({ssid: ssid,security: sec}, config_callback); 
+		}).fail(function (jqXHR, textStatus, errorThrown) {  
+			comm_error(1); 
+		});
 	}
 	function pubkey_callback_retry(err, dat) {
 	    if(err) {
@@ -444,7 +487,50 @@ function comm_error_retry(){
 	    		$.get( "http://192.168.0.1/system-version", function(){
 	    			$('#connecting').fadeOut(150,function(){$('#update_ok').fadeIn(150);});	
 	    		} ).fail(function(){
-	    			$('#connecting').fadeOut(150,function(){$('#update_failed').fadeIn(150);});	
+	    			$('#connecting').fadeOut(150,function(){
+	    				if (updateServerMode==1){
+	    					$('#failed_message_1').show();
+	    					$('#failed_message_2').hide();
+	    					$('#failed_message_3').hide();
+	    					$('#failed_message_4').hide();
+	    					$('#failed_message_5').hide();
+	    					updateServerMode = 2;
+	    					slowFail = 0;
+	    				}
+	    				else if(updateServerMode == 2 && slowFail < 2){
+	    					$('#failed_message_1').hide();
+	    					$('#failed_message_2').show();
+	    					$('#failed_message_3').hide();
+	    					$('#failed_message_4').hide();
+	    					$('#failed_message_5').hide();
+	    					slowFail++;
+	    				}
+	    				else if(updateServerMode == 2 && slowFail >= 2){
+	    					$('#failed_message_1').hide();
+	    					$('#failed_message_2').hide();
+	    					$('#failed_message_3').show();
+	    					$('#failed_message_4').hide();
+	    					$('#failed_message_5').hide();
+	    					slowFail = 0;
+	    				}
+	    				else if(updateServerMode == 3 && slowFail < 2){
+	    					$('#failed_message_1').hide();
+	    					$('#failed_message_2').hide();
+	    					$('#failed_message_3').hide();
+	    					$('#failed_message_4').show();
+	    					$('#failed_message_5').hide();
+	    					slowFail++;
+	    				}
+	    				else if(updateServerMode == 3 && slowFail >= 2){
+	    					$('#failed_message_1').hide();
+	    					$('#failed_message_2').hide();
+	    					$('#failed_message_3').hide();
+	    					$('#failed_message_4').hide();
+	    					$('#failed_message_5').show();
+	    					slowFail = 0;
+	    				}
+	    				$('#update_failed').fadeIn(150);
+	    			});	
 	    		});
 	    	}
 	    	else{
@@ -490,6 +576,10 @@ function comm_error_retry(){
 		$('#check_cloud').fadeOut(150,function(){claim_code = "";$('#particle').fadeIn(150,function(){});});	
 	});
 	$('.back_to_wifi').click(function(){
+		if(updateServerMode == 2){
+			updateServerMode = 1;
+		}
+		slowFail = 0;
 		$('#'+$(this).data('out')).fadeOut(150,function(){ claim_code = "";$('#connect').fadeIn(150,function(){});});	
 	});
 	$('#connect_back').click(function(){
@@ -746,7 +836,7 @@ function comm_error_retry(){
     	</div>
     	<div id="saved" style="display:none;text-align:center;">
     		<b>Your Oak will now reboot and attempt to connect using the settings you've just entered.</b><br><br>
-    		<div id="wait_long">Once connected your Oak will download a firmware update, this may take several minutes. You should see the LED on the Oak blink rapidly while it downloads the update, please do not unplug it during this time.<br><br><div style="text-align:center;">Allowing time for the Oak to update, the next step will be shown in <span id="oak_counter">30</span> seconds.<br><br><img class="loader_image"></div></div>
+    		<div id="wait_long">Once connected your Oak will download a firmware update, this may take several minutes. You should see the LED on the Oak blink rapidly while it downloads the update, please do not unplug it during this time.<br><br><div style="text-align:center;">Allowing time for the Oak to update, the next step will be shown in <span id="oak_counter">--</span> seconds.<br><br><img class="loader_image"></div></div>
 			<div id="wait_short">
 				Please connect back to the WiFi network that provides your internet connection and click the "Next" button to check if the Oak has connected to the Particle Cloud.
 
@@ -757,7 +847,8 @@ function comm_error_retry(){
     	</div>
     	<!--if needs an update then jump to #connect and then to these next two-->
     	<div id="update_failed" style="display:none;">
-    		<b>Your Oak failed to download the update. Please power cycle your Oak, reconnect to its AP, and then click "Retry" to try again with your current settings or "Change Settings" to try a different WiFi network.</b>
+
+    		<b><span id="failed_message_1">Your Oak failed to download the update. Please power cycle your Oak, reconnect to its AP, and then click "Retry" to try getting the update at a slower speed (which can improve reliability) with your current settings or "Change Settings" to try again at full speed with a different WiFi network.</span><span id="failed_message_2">Your Oak still failed to download the update. Please power cycle your Oak, reconnect to its AP, and then click "Retry" to try getting the update again with your current settings or "Change Settings" to try a different WiFi network. If it fails 3 times with your current settings you will be presented with additional troubleshooting options.</span><span id="failed_message_3">Your Oak still failed to download the update. Please click "Change Settings" to try a different WiFi network or reconnect to your WiFi network and then, for additional troubleshooting information, follow this link: <a href="http://digistump.com/wiki/oak/tutorials/local_update">http://digistump.com/wiki/oak/tutorials/local_update</a>.</span><span id="failed_message_4">Your Oak failed to download the update from the local server. Please power cycle your Oak, reconnect to its AP, and then click "Retry" to try getting the update from the local server again. Please retry this process at least 3 times.</span><span id="failed_message_5">Your Oak still failed to download the update from the local server. Please  reconnect to your WiFi network and then see additional troubleshooting information at this link: <a href="http://digistump.com/wiki/oak/tutorials/local_update">http://digistump.com/wiki/oak/tutorials/local_update</a>.</span></b>
 
 				<div style="padding-top:10px;text-align:center;">
 		        <button class="pure-button pure-button-primary" id="update_retry">Retry</button> <!--do the connect routine-->
