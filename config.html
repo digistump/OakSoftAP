@@ -126,6 +126,7 @@ $(function() {
 	  $('#login_register').attr('disabled',false);
 	  if(body === null){
 	  	$('#login_password').val("");
+	  	$('#login_error').html("Invalid email or password.");
 	  	$('#login_error').show();
 	  }
 	  else{
@@ -608,7 +609,8 @@ function comm_error_retry(){
 	    $('#login_button').click();
 	  }
 	  else{
-	  	//TODO SHOW ERROR HERE
+	  	$('#login_error').html(err.message);
+	  	$('#login_error').show();
 	  	$('#login_button').attr('disabled',false);
 	  	$('#login_register').attr('disabled',false);
 	  }
