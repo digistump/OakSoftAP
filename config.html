@@ -1,5 +1,8 @@
 <!DOCTYPE html>
 <head>
+	<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+	<meta http-equiv="Pragma" content="no-cache" />
+	<meta http-equiv="Expires" content="0" />
 	<meta charset='UTF-8'>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Oak Config App</title>
@@ -129,6 +132,9 @@ $(function() {
 	  	$('#login_error').show();
 	  }
 	  else{
+
+	  	$('#login_error').hide();
+	  	$('#register_error').hide();
 	  			$('#login_email').val("");
 		$('#login_password').val("");
 	  	$('#connect_failed').hide();
@@ -309,6 +315,28 @@ function comm_error_retry(){
 		//claim_during_cloud = true;
 		//claim_callback(false, {"r":0});
 		
+	}
+
+
+	function setID(id){
+		if(id.trim().length != 24){
+			$('#id_error').show();
+			return;
+		}
+		$('#id_error').hide();
+		$('#set_id').fadeOut(150,function(){$('#save_id').fadeIn(150,function(){});});
+		$.ajax('http://192.168.0.1/set',{
+ 		    'data': JSON.stringify({
+ 				"device-id":id.trim(),
+ 			}), 
+ 		    'type': 'POST',
+  		    'processData': false,
+  		    'contentType': 'text/plain'
+  		}).done(function (data) { 
+  			$('#save_id').fadeOut(150,function(){$('#id_ok').fadeIn(150,function(){});});
+		}).fail(function (jqXHR, textStatus, errorThrown) {  
+			comm_error(1); 
+		});
 	}
 
 	function pubkey_callback(err, dat) {
@@ -534,6 +562,16 @@ function comm_error_retry(){
 	    		});
 	    	}
 	    	else{
+	    		if(dat.id === undefined){
+		    		//no id
+		    		$('#connecting').fadeOut(150,function(){$('#set_id').fadeIn(150);});
+		    		return;	
+		    	}
+	    		if(dat.id === ""){
+		    		//no id
+		    		$('#connecting').fadeOut(150,function(){$('#set_id').fadeIn(150);});
+		    		return;	
+		    	}
 		    	//console.log("Device ID: %s, claimed: %s", dat.id, dat.claimed ? "yes" : "no");
 			    softap_device = dat;
 			    if($.inArray(softap_device.id,claimed_devices)>=0 || softap_device.claimed){
@@ -571,7 +609,9 @@ function comm_error_retry(){
 		});
 	});
 
-
+	$('#apply_id').click(function(){
+		setID($('#set_device_id').val());	
+	});
 	$('#end_back').click(function(){
 		$('#check_cloud').fadeOut(150,function(){claim_code = "";$('#particle').fadeIn(150,function(){});});	
 	});
@@ -584,6 +624,9 @@ function comm_error_retry(){
 	});
 	$('#connect_back').click(function(){
 		$('#connect').fadeOut(150,function(){$('#particle').fadeIn(150,function(){});});	
+	});
+	$('#id_connect').click(function(){
+		$('#id_ok').fadeOut(150,function(){$('#connect').fadeIn(150,function(){});});	
 	});
 	$('#connect_next').click(function(){
 		$('#connect').fadeOut(150,function(){$('#connecting').fadeIn(150,function(){connect_start = Date.now(); try_to_connect();});});	
@@ -609,6 +652,7 @@ function comm_error_retry(){
 	  }
 	  else{
 	  	//TODO SHOW ERROR HERE
+	  	$('#register_error').show();
 	  	$('#login_button').attr('disabled',false);
 	  	$('#login_register').attr('disabled',false);
 	  }
@@ -769,6 +813,7 @@ function comm_error_retry(){
     	<div id="particle"  class="pure-form">
     		You must have a Particle.io account to setup an Oak. Please login or register below.<br>
 <br><br>
+<div id="register_error" style="color:red;font-weight:bold;display:none;">Cannot register account. Check for invalid characters or bad email address.</div>
 <div id="login_error" style="color:red;font-weight:bold;display:none;">Invalid email or password.</div>
 		<input class="pure-input-1" id="login_email" type="email" placeholder="Particle Login Email"><br>
 		<input class="pure-input-1" id="login_password" type="password" placeholder="Particle Password">
@@ -796,6 +841,30 @@ function comm_error_retry(){
     	<div id="connecting" style="display:none;text-align:center;">
     		<b>Attempting to connect to your Oak...</b><br><br><br><img class="loader_image">
 
+    	</div>
+    	<div id="set_id" style="display:none;">
+    	Your Oak/Acorn devices does not have a Device ID set. Please enter the ID below and click Apply. <br>
+    	<br>
+    	If you have not been provided with an ID please email support@digistump.com to report this issue with your device.<br><br>
+    		<div id="id_error" style="display:none; color:red;">Invalid ID length.</div>
+			<div id="manual" class="pure-form">
+		         <input class="pure-input-1" type="text" id="set_device_id" placeholder="Device ID">
+		         <div style="padding-top:10px;text-align:center;">
+		        <button class="pure-button pure-button-primary" id="apply_id">Apply</button>
+		        </div>
+			</div>
+		</div>
+		<div id="save_id" style="display:none;text-align:center;">
+    		<b>Setting your device's ID...</b><br><br><br><img class="loader_image">
+
+    	</div>
+		<div id="id_ok" style="display:none;">
+    		<b>The Device ID has been set. Please disconnect the device from its power supply and then reconnect it. The LEDs will then stay solidly lit for up to several minutes, once one LED begins blinking click next.</b>
+
+				<div style="padding-top:10px;text-align:center;">
+		        <button class="pure-button pure-button-primary" id="id_connect">Next</button> 
+		        </div>
+		
     	</div>
     	<div id="wifi" style="display:none;">
     	<div id="wifi_claimed" style="color:red;font-weight:bold;display:none;">This Oak may already be claimed by another Particle account, this wizard will only allow you to change the WiFi connection settings.<br><br></div>
