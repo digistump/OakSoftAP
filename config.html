@@ -306,7 +306,7 @@ function comm_error_retry(){
 
 		
 		$.ajax('http://192.168.0.1/set',{
-		    'data': JSON.stringify({"cc":claim_code+'~'}), //{action:'x',params:['a','b','c']}
+		    'data': JSON.stringify({"cc":claim_code.replace(/\+/g,'%2B')+'~'}), //{action:'x',params:['a','b','c']}
 		    'type': 'POST',
 		    'processData': false,
 		    'contentType': 'text/plain'
